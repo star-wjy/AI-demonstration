@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI新闻情绪自动分析系统 - OpenClaw多Agent项目</title>
+    <script src="https://cdn.tailwindcss.com/3.4.14"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.6) 0%, rgba(168, 85, 247, 0.4) 100%);
+            border-radius: 50%;
+            animation: float 15s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) translateX(0);
+                opacity: 0.3;
+            }
+            50% {
+                transform: translateY(-100px) translateX(50px);
+                opacity: 0.8;
+            }
+        }
+
+        .page-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-snap-type: y mandatory;
+        }
+
+        .page {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            padding-bottom: 120px;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+        }
+
+        .page.inactive-up {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+
+        .page.inactive-down {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        .logo {
+            position: fixed;
+            top: 20px;
+            left: 30px;
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            z-index: 100;
+            letter-spacing: 2px;
+        }
+
+        .page-indicator {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            z-index: 100;
+            font-weight: 500;
+        }
+
+        .nav-dots {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-dot:hover {
+            background: rgba(56, 189, 248, 0.6);
+            transform: scale(1.2);
+        }
+
+        .nav-dot.active {
+            background: #38bdf8;
+            box-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8;
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        .title-gradient {
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .glow-line {
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #38bdf8, #a855f7, transparent);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(168, 85, 247, 0.3);
+            margin: 20px 0;
+        }
+
+        .arrow-down {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            color: rgba(56, 189, 248, 0.8);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            50% {
+                transform: translateX(-50%) translateY(10px);
+            }
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .agent-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .agent-card:hover {
+            border-color: #38bdf8;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.3), 0 0 60px rgba(56, 189, 248, 0.1);
+            transform: translateY(-10px);
+        }
+
+        .agent-card:hover::before {
+            opacity: 1;
+        }
+
+        .agent-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 1rem;
+            color: white;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .tech-tag {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: #93c5fd;
+            font-size: 14px;
+        }
+
+        .timeline-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+
+        .timeline-card.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .timeline-card:hover {
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .glow-arrow {
+            font-size: 48px;
+            color: #38bdf8;
+            text-shadow: 0 0 20px #38bdf8, 0 0 40px #38bdf8;
+            margin: 0 1rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            min-width: 140px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 8px;
+        }
+
+        .member-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .member-card:hover {
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(56, 189, 248, 0.3);
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+
+        /* 技术架构动画相关样式 */
+        .tech-layer {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .tech-layer.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tech-item {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .tech-item.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .tech-arrow {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .tech-arrow.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 故事页面样式 */
+        .story-section {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .story-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .story-image-wrapper {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            max-width: 400px;
+        }
+        .story-image-wrapper.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 第7页动画样式 */
+        .page7-title {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page7-title.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .page7-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page7-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .page7-right-title {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .page7-right-title.visible {
+            opacity: 1;
+        }
+        .page7-c-image {
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .page7-c-image.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .page7-c-image:hover {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5) !important;
+        }
+        .page7-image-a:hover {
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.5) !important;
+        }
+        
+        .story-image-wrapper:hover {
+            transform: scale(1.03);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4), 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .story-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        
+        #story-title, #story-divider {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #story-title.visible, #story-divider.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .page {
+                padding: 1rem;
+            }
+            
+            .logo {
+                font-size: 20px;
+                top: 15px;
+                left: 15px;
+            }
+            
+            .page-indicator {
+                font-size: 14px;
+                top: 15px;
+                right: 15px;
+            }
+            
+            .nav-dot {
+                width: 10px;
+                height: 10px;
+            }
+            
+            .story-image {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="particles" id="particles"></div>
+    
+    <div class="logo">OC</div>
+    <div class="page-indicator" id="pageIndicator">1 / 10</div>
+    
+    <div class="nav-dots" id="navDots">
+        <div class="nav-dot active" data-page="0"></div>
+        <div class="nav-dot" data-page="1"></div>
+        <div class="nav-dot" data-page="2"></div>
+        <div class="nav-dot" data-page="3"></div>
+        <div class="nav-dot" data-page="4"></div>
+        <div class="nav-dot" data-page="5"></div>
+        <div class="nav-dot" data-page="6"></div>
+        <div class="nav-dot" data-page="7"></div>
+        <div class="nav-dot" data-page="8"></div>
+        <div class="nav-dot" data-page="9"></div>
+    </div>
+
+    <div class="page-container">
+        <!-- 第1页：封面页 -->
+        <div class="page active" id="page0">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-6xl font-bold mb-4 title-gradient">AI新闻情绪自动分析系统</h1>
+                <p class="text-xl md:text-2xl text-sky-300/80 mb-6">基于OpenClaw多Agent协作的自动化工作流</p>
+                <div class="glow-line mx-auto"></div>
+                <div class="mt-8 text-gray-300 space-y-2">
+                    <p class="text-lg">课程名称：人工智能大作业</p>
+                    <p class="text-lg">小组成员：麻皓阳、蒋航、魏嘉佑</p>
+                    <p class="text-lg">指导老师：朱朝阳</p>
+                    <p class="text-lg">汇报日期：2026年6月</p>
+                </div>
+            </div>
+            <div class="arrow-down" id="arrowDown">
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+
+        <!-- 第2页：项目概述 -->
+        <div class="page" id="page1">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">项目概述</h2>
+            <div class="flex flex-col lg:flex-row gap-8 items-center max-w-6xl w-full">
+                <div class="flex-1 space-y-8">
+                    <div class="glass-card">
+                        <h3 class="text-xl font-bold text-sky-400 mb-4 flex items-center gap-2">
+                            <i class="fas fa-info-circle"></i>
+                            项目背景
+                        </h3>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-sky-400 mt-1" style="font-size: 8px;"></i>
+                                信息爆炸时代，人工筛选新闻效率低下
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-sky-400 mt-1" style="font-size: 8px;"></i>
+                                传统数据分析工具缺乏自动化和协作能力
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-sky-400 mt-1" style="font-size: 8px;"></i>
+                                多Agent技术为自动化信息处理提供了新方案
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <h3 class="text-xl font-bold text-violet-400 mb-4 flex items-center gap-2">
+                            <i class="fas fa-target"></i>
+                            核心目标
+                        </h3>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-violet-400 mt-1" style="font-size: 8px;"></i>
+                                搭建基于OpenClaw的多Agent协作平台
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-violet-400 mt-1" style="font-size: 8px;"></i>
+                                实现AI新闻的自动采集、情感分析和报告生成
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-circle text-violet-400 mt-1" style="font-size: 8px;"></i>
+                                打造7×24小时无人值守的信息监测系统
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex-1 flex justify-center">
+                    <div class="glass-card p-4">
+                        <img src="openclaw.webp" 
+                             alt="OpenClaw Logo" 
+                             class="w-64 h-64 object-contain rounded-lg cursor-pointer"
+                             onclick="openModal(this)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第3页：技术架构 -->
+        <div class="page" id="page2">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">整体技术架构</h2>
+            <div class="flex flex-col items-center gap-6 max-w-5xl w-full">
+                <!-- 顶层 -->
+                <div class="tech-layer glass-card w-full" id="tech-layer-1">
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">顶层：应用层</h3>
+                        <div class="flex flex-wrap justify-center gap-4">
+                            <div class="tech-item bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3" id="tech-item-1-1">
+                                <i class="fas fa-workflow text-green-400 mb-2 block"></i>
+                                <span class="text-green-300">自动化工作流</span>
+                            </div>
+                            <div class="tech-item bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3" id="tech-item-1-2">
+                                <i class="fas fa-chart-bar text-green-400 mb-2 block"></i>
+                                <span class="text-green-300">数据可视化</span>
+                            </div>
+                            <div class="tech-item bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3" id="tech-item-1-3">
+                                <i class="fas fa-file-text text-green-400 mb-2 block"></i>
+                                <span class="text-green-300">日报输出</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tech-arrow text-3xl text-sky-400" id="tech-arrow-1">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <!-- 中间层 -->
+                <div class="tech-layer glass-card w-full" id="tech-layer-2">
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold text-sky-400 mb-4">中间层：Agent层</h3>
+                        <div class="flex flex-wrap justify-center gap-4">
+                            <div class="tech-item bg-sky-500/10 border border-sky-500/30 rounded-lg px-4 py-3" id="tech-item-2-1">
+                                <i class="fas fa-download text-sky-400 mb-2 block"></i>
+                                <span class="text-sky-300">信息采集Agent</span>
+                            </div>
+                            <div class="tech-item bg-sky-500/10 border border-sky-500/30 rounded-lg px-4 py-3" id="tech-item-2-2">
+                                <i class="fas fa-smile text-sky-400 mb-2 block"></i>
+                                <span class="text-sky-300">情感分析Agent</span>
+                            </div>
+                            <div class="tech-item bg-sky-500/10 border border-sky-500/30 rounded-lg px-4 py-3" id="tech-item-2-3">
+                                <i class="fas fa-file-alt text-sky-400 mb-2 block"></i>
+                                <span class="text-sky-300">报告生成Agent</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tech-arrow text-3xl text-sky-400" id="tech-arrow-2">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <!-- 底层 -->
+                <div class="tech-layer glass-card w-full" id="tech-layer-3">
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold text-violet-400 mb-4">底层：基础设施层</h3>
+                        <div class="flex flex-wrap justify-center gap-4">
+                            <div class="tech-item bg-violet-500/10 border border-violet-500/30 rounded-lg px-4 py-3" id="tech-item-3-1">
+                                <i class="fas fa-cloud text-violet-400 mb-2 block"></i>
+                                <span class="text-violet-300">云服务器</span>
+                            </div>
+                            <div class="tech-item bg-violet-500/10 border border-violet-500/30 rounded-lg px-4 py-3" id="tech-item-3-2">
+                                <i class="fas fa-robot text-violet-400 mb-2 block"></i>
+                                <span class="text-violet-300">OpenClaw框架</span>
+                            </div>
+                            <div class="tech-item bg-violet-500/10 border border-violet-500/30 rounded-lg px-4 py-3" id="tech-item-3-3">
+                                <i class="fas fa-brain text-violet-400 mb-2 block"></i>
+                                <span class="text-violet-300">大模型API</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tech-stack mt-8">
+                <span class="tech-tag">OpenClaw</span>
+                <span class="tech-tag">Python</span>
+                <span class="tech-tag">HuggingFace</span>
+                <span class="tech-tag">Matplotlib</span>
+                <span class="tech-tag">Tailwind CSS</span>
+            </div>
+        </div>
+
+        <!-- 第4页：核心工作流 -->
+        <div class="page" id="page3">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">自动化工作流演示</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 w-full max-w-6xl">
+                <div class="timeline-card flex-1" id="step1">
+                    <div class="step-number">1</div>
+                    <h3 class="text-xl font-bold text-sky-400 mb-3">信息采集</h3>
+                    <p class="text-gray-400 text-sm mb-3">操作：每日定时抓取AI行业RSS新闻</p>
+                    <div class="bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-2 inline-block">
+                        <span class="text-sky-300 text-sm">输出：raw_news.json</span>
+                    </div>
+                </div>
+                <div class="glow-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="timeline-card flex-1" id="step2">
+                    <div class="step-number">2</div>
+                    <h3 class="text-xl font-bold text-violet-400 mb-3">情感分析</h3>
+                    <p class="text-gray-400 text-sm mb-3">操作：调用预训练模型判断新闻情绪倾向</p>
+                    <div class="bg-violet-500/10 border border-violet-500/30 rounded-lg px-3 py-2 inline-block">
+                        <span class="text-violet-300 text-sm">输出：analyzed_news.json</span>
+                    </div>
+                </div>
+                <div class="glow-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="timeline-card flex-1" id="step3">
+                    <div class="step-number">3</div>
+                    <h3 class="text-xl font-bold text-green-400 mb-3">报告生成</h3>
+                    <p class="text-gray-400 text-sm mb-3">操作：生成Markdown日报+情绪分布图表</p>
+                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 inline-block">
+                        <span class="text-green-300 text-sm">输出：AI情绪日报.md + emotion_chart.png</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第5页：AI数字员工团队 -->
+        <div class="page" id="page4">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">我们的AI数字员工</h2>
+            <div class="flex flex-col md:flex-row gap-6 max-w-6xl w-full">
+                <div class="agent-card flex-1">
+                    <div class="agent-avatar">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-1">信息采集Agent</h3>
+                    <p class="text-gray-400 text-sm mb-4">勤劳的信息搬运工</p>
+                    <div class="text-left border-t border-gray-700 pt-4">
+                        <p class="text-gray-400 text-sm mb-2">核心技能：</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-sky-400"></i> RSS订阅
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-sky-400"></i> 定时任务
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-sky-400"></i> 数据清洗
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="agent-card flex-1">
+                    <div class="agent-avatar">
+                        <i class="fas fa-smile"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-1">情感分析Agent</h3>
+                    <p class="text-gray-400 text-sm mb-4">专业的情绪判官</p>
+                    <div class="text-left border-t border-gray-700 pt-4">
+                        <p class="text-gray-400 text-sm mb-2">核心技能：</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-violet-400"></i> 自然语言处理
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-violet-400"></i> 预训练模型调用
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-violet-400"></i> 数据标注
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="agent-card flex-1">
+                    <div class="agent-avatar">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-1">报告生成Agent</h3>
+                    <p class="text-gray-400 text-sm mb-4">优秀的文案编辑</p>
+                    <div class="text-left border-t border-gray-700 pt-4">
+                        <p class="text-gray-400 text-sm mb-2">核心技能：</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-green-400"></i> Markdown写作
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-green-400"></i> 数据可视化
+                            </li>
+                            <li class="flex items-center gap-2 text-gray-300 text-sm">
+                                <i class="fas fa-check text-green-400"></i> 报告排版
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第6页：运行数据成果 -->
+        <div class="page" id="page5">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">项目运行数据成果</h2>
+            <div class="flex flex-wrap justify-center gap-6 mb-8">
+                <div class="stat-card">
+                    <div class="stat-number" id="stat1">3</div>
+                    <div class="stat-label">部署Agent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat2">12</div>
+                    <div class="stat-label">稳定运行天数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat3">360</div>
+                    <div class="stat-label">累计分析新闻</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat4">12</div>
+                    <div class="stat-label">自动生成报告</div>
+                </div>
+            </div>
+            <div class="text-lg text-gray-400 mb-4">以5月28日为例</div>
+            <div class="flex flex-col lg:flex-row gap-8 max-w-6xl w-full">
+                <div class="flex-1 glass-card">
+                    <div id="pieChart" style="height: 300px;"></div>
+                </div>
+                <div class="flex-1 flex items-center justify-center">
+                    <div class="border border-sky-500/30 rounded-lg overflow-hidden shadow-2xl cursor-pointer" onclick="openModal(this.querySelector('img'))">
+                        <img src="result.png" 
+                             alt="日报示例" 
+                             class="w-full h-auto max-h-80 object-cover">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第7页：项目运行成果 -->
+        <div class="page" id="page6">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8 page7-title">项目运行成果</h2>
+            <div class="flex flex-row w-full h-[calc(100vh-180px)]">
+                <!-- 左侧区域：40%宽度 -->
+                <div class="w-[40%] flex flex-col items-center justify-center page7-left">
+                    <p class="text-gray-400 text-sm mb-4 page7-left-title">项目原始运行日志总览</p>
+                    <div class="glass-card p-2 cursor-pointer page7-image-a hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);" onclick="openModal('A.png')">
+                        <img src="A.png" alt="项目原始运行日志总览" class="w-full h-auto max-h-[60vh] object-contain rounded-lg">
+                    </div>
+                </div>
+                <!-- 右侧区域：60%宽度 -->
+                <div class="w-[60%] flex flex-col items-center justify-center page7-right">
+                    <h3 class="text-xl font-bold text-sky-400 mb-6 page7-right-title">多批次运行数据明细（C1~C13）</h3>
+                    <div class="flex flex-wrap justify-center page7-images-container" style="width: 100%; padding: 0 20px;">
+                        <img src="C1.png" alt="C1" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: 0; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C1.png')">
+                        <img src="C2.png" alt="C2" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C2.png')">
+                        <img src="C3.png" alt="C3" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C3.png')">
+                        <img src="C4.png" alt="C4" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C4.png')">
+                        <img src="C5.png" alt="C5" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C5.png')">
+                        <img src="C6.png" alt="C6" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C6.png')">
+                        <img src="C7.png" alt="C7" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C7.png')">
+                        <img src="C8.png" alt="C8" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C8.png')">
+                        <img src="C9.png" alt="C9" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C9.png')">
+                        <img src="C10.png" alt="C10" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C10.png')">
+                        <img src="C11.png" alt="C11" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C11.png')">
+                        <img src="C12.png" alt="C12" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C12.png')">
+                        <img src="C13.png" alt="C13" class="page7-c-image w-20 h-24 object-cover rounded-lg cursor-pointer hover:scale-105 hover:-translate-y-1 transition-all duration-300" style="margin-left: -16px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openModal('C13.png')">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第8页：小组分工 -->
+        <div class="page" id="page7">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">小组成员与分工</h2>
+            <div class="flex flex-col md:flex-row gap-6 max-w-6xl w-full">
+                <div class="member-card flex-1">
+                    <h3 class="text-2xl font-bold text-sky-400 mb-2">麻皓阳</h3>
+                    <p class="text-violet-400 mb-4">OpenClaw总架构师</p>
+                    <ul class="space-y-2 text-gray-300 text-sm">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-sky-400 mt-1"></i>
+                            云服务器购买与配置
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-sky-400 mt-1"></i>
+                            OpenClaw框架部署与初始化
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-sky-400 mt-1"></i>
+                            Agent创建与工作流调度
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-sky-400 mt-1"></i>
+                            团队协作与进度管理
+                        </li>
+                    </ul>
+                </div>
+                <div class="member-card flex-1">
+                    <h3 class="text-2xl font-bold text-violet-400 mb-2">蒋航</h3>
+                    <p class="text-sky-400 mb-4">AI情感分析师</p>
+                    <ul class="space-y-2 text-gray-300 text-sm">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-violet-400 mt-1"></i>
+                            情感分析Agent的SOUL设定
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-violet-400 mt-1"></i>
+                            情感分析技能开发与测试
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-violet-400 mt-1"></i>
+                            HuggingFace模型对接
+                        </li>
+                    </ul>
+                </div>
+                <div class="member-card flex-1">
+                    <h3 class="text-2xl font-bold text-green-400 mb-2">魏嘉佑</h3>
+                    <p class="text-sky-400 mb-4">AI汇报官</p>
+                    <ul class="space-y-2 text-gray-300 text-sm">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                            报告生成Agent的SOUL设定
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                            报告生成技能开发与测试
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                            数据可视化图表制作
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第9页：项目历程与团队风采 -->
+        <div class="page" id="page8">
+            <div class="w-full max-w-5xl">
+                <h2 class="text-3xl md:text-4xl font-bold title-gradient text-center mb-4" id="story-title">项目历程与团队风采</h2>
+                <div class="glow-line mx-auto mb-8" id="story-divider"></div>
+                
+                <!-- 板块一：服务器搭建 -->
+                <div class="story-section mb-8" id="story-section-1">
+                    <h3 class="text-xl font-bold text-sky-400 mb-2 text-center" id="story-section-1-title">初期部署 · 服务器搭建</h3>
+                    <p class="text-gray-400 text-center mb-4" id="story-section-1-desc">项目启动阶段，团队协同完成服务器配置、框架部署与运行环境搭建，齐心协力筑牢项目基础。</p>
+                    <div class="flex justify-center">
+                        <div class="story-image-wrapper" id="story-image-1-1">
+                            <img src="photo1(1).jpg" alt="服务器搭建" class="story-image">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块二：功能迭代 -->
+                <div class="story-section mb-8" id="story-section-2">
+                    <h3 class="text-xl font-bold text-violet-400 mb-2 text-center" id="story-section-2-title">反复打磨 · 功能迭代修改</h3>
+                    <p class="text-gray-400 text-center mb-4" id="story-section-2-desc">开发过程中针对各项功能持续调试、迭代更新，耐心排查问题、优化细节，一步步完善项目功能。</p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <div class="story-image-wrapper" id="story-image-2-1">
+                            <img src="photo2(1).jpg" alt="功能迭代1" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-2-2">
+                            <img src="photo2(2).jpg" alt="功能迭代2" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-2-3">
+                            <img src="photo2(3).jpg" alt="功能迭代3" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-2-4">
+                            <img src="photot2(4).jpg" alt="功能迭代4" class="story-image">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 板块三：同心协作 -->
+                <div class="story-section" id="story-section-3">
+                    <h3 class="text-xl font-bold text-green-400 mb-2 text-center" id="story-section-3-title">携手同行 · 协作与友谊</h3>
+                    <p class="text-gray-400 text-center mb-4" id="story-section-3-desc">小组每位成员各司其职、认真负责，高效配合完成全部任务。我们因这门课程相识，工作之余也会在群内交流日常，在并肩合作的过程中，收获了真挚又宝贵的同窗友谊。</p>
+                    <div class="grid grid-cols-2 gap-4 max-w-3xl mx-auto">
+                        <div class="story-image-wrapper" id="story-image-3-1">
+                            <img src="photo3(1).jpg" alt="团队协作1" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-3-2">
+                            <img src="photo3(2).jpg" alt="团队协作2" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-3-3">
+                            <img src="photo3(3).jpg" alt="团队协作3" class="story-image">
+                        </div>
+                        <div class="story-image-wrapper" id="story-image-3-4">
+                            <img src="photo3(4).jpg" alt="团队协作4" class="story-image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第10页：总结与展望 -->
+        <div class="page" id="page9">
+            <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">总结与展望</h2>
+            <div class="flex flex-col lg:flex-row gap-8 max-w-5xl w-full">
+                <div class="glass-card flex-1">
+                    <h3 class="text-xl font-bold text-sky-400 mb-4 flex items-center gap-2">
+                        <i class="fas fa-award"></i>
+                        项目收获
+                    </h3>
+                    <ul class="space-y-3 text-gray-300">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-star text-yellow-400 mt-1"></i>
+                            掌握了OpenClaw多Agent框架的使用
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-star text-yellow-400 mt-1"></i>
+                            理解了自动化工作流的设计思路
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-star text-yellow-400 mt-1"></i>
+                            提升了团队协作和项目管理能力
+                        </li>
+                    </ul>
+                </div>
+                <div class="glass-card flex-1">
+                    <h3 class="text-xl font-bold text-violet-400 mb-4 flex items-center gap-2">
+                        <i class="fas fa-rocket"></i>
+                        未来展望
+                    </h3>
+                    <ul class="space-y-3 text-gray-300">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-arrow-right text-violet-400 mt-1"></i>
+                            增加更多数据源（论文、社交媒体）
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-arrow-right text-violet-400 mt-1"></i>
+                            引入更先进的大模型提升分析精度
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-arrow-right text-violet-400 mt-1"></i>
+                            增加用户交互界面和历史数据查询功能
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12 text-center">
+                <h2 class="text-4xl font-bold title-gradient mb-4">感谢聆听！</h2>
+                <p class="text-sky-400 text-lg">感谢朱朝阳老师的悉心指导</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" alt="放大查看">
+        </div>
+    </div>
+
+    <script>
+        const pages = document.querySelectorAll('.page');
+        const navDots = document.querySelectorAll('.nav-dot');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const arrowDown = document.getElementById('arrowDown');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalImage = document.getElementById('modalImage');
+        
+        let currentPage = 0;
+        let isAnimating = false;
+        const pageCount = pages.length;
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+                particle.style.width = (2 + Math.random() * 4) + 'px';
+                particle.style.height = particle.style.width;
+                container.appendChild(particle);
+            }
+        }
+
+        function updatePageIndicator() {
+            pageIndicator.textContent = `${currentPage + 1} / ${pageCount}`;
+        }
+
+        function updateNavDots() {
+            navDots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPage);
+            });
+        }
+
+        function goToPage(index) {
+            if (index < 0 || index >= pageCount || index === currentPage) return;
+            
+            currentPage = index;
+            updatePageIndicator();
+            updateNavDots();
+            pageContainer.scrollTo({
+                top: index * window.innerHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        function nextPage() {
+            goToPage(currentPage + 1);
+        }
+
+        function prevPage() {
+            goToPage(currentPage - 1);
+        }
+
+        function animateTimeline() {
+            const cards = document.querySelectorAll('.timeline-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('visible');
+                }, index * 300);
+            });
+        }
+
+        function animateTechArchitecture() {
+            // 先重置所有元素的可见性
+            const allLayers = document.querySelectorAll('.tech-layer, .tech-item, .tech-arrow');
+            allLayers.forEach(el => el.classList.remove('visible'));
+
+            // 第一阶段：顶层
+            setTimeout(() => {
+                document.getElementById('tech-layer-1').classList.add('visible');
+                document.getElementById('tech-arrow-1').classList.add('visible');
+                
+                // 顶层小模块
+                setTimeout(() => {
+                    document.getElementById('tech-item-1-1').classList.add('visible');
+                    setTimeout(() => {
+                        document.getElementById('tech-item-1-2').classList.add('visible');
+                        setTimeout(() => {
+                            document.getElementById('tech-item-1-3').classList.add('visible');
+                            
+                            // 第二阶段：中间层
+                            setTimeout(() => {
+                                document.getElementById('tech-layer-2').classList.add('visible');
+                                document.getElementById('tech-arrow-2').classList.add('visible');
+                                
+                                // 中间层小模块
+                                setTimeout(() => {
+                                    document.getElementById('tech-item-2-1').classList.add('visible');
+                                    setTimeout(() => {
+                                        document.getElementById('tech-item-2-2').classList.add('visible');
+                                        setTimeout(() => {
+                                            document.getElementById('tech-item-2-3').classList.add('visible');
+                                            
+                                            // 第三阶段：底层
+                                            setTimeout(() => {
+                                                document.getElementById('tech-layer-3').classList.add('visible');
+                                                
+                                                // 底层小模块
+                                                setTimeout(() => {
+                                                    document.getElementById('tech-item-3-1').classList.add('visible');
+                                                    setTimeout(() => {
+                                                        document.getElementById('tech-item-3-2').classList.add('visible');
+                                                        setTimeout(() => {
+                                                            document.getElementById('tech-item-3-3').classList.add('visible');
+                                                        }, 300);
+                                                    }, 300);
+                                                }, 600); // 等大模块动画完成（0.6s）
+                                            }, 600);
+                                        }, 300);
+                                    }, 300);
+                                }, 600); // 等大模块动画完成（0.6s）
+                            }, 600);
+                        }, 300);
+                    }, 300);
+                }, 600); // 等大模块动画完成（0.6s）
+            }, 100); // 稍微延迟开始
+        }
+
+        function animatePage7() {
+            // 重置所有元素
+            document.querySelector('.page7-title').classList.remove('visible');
+            document.querySelector('.page7-left').classList.remove('visible');
+            document.querySelector('.page7-right-title').classList.remove('visible');
+            document.querySelectorAll('.page7-c-image').forEach(img => img.classList.remove('visible'));
+            
+            // 1. 标题淡入上浮 (0.5s)
+            setTimeout(() => {
+                document.querySelector('.page7-title').classList.add('visible');
+                
+                // 2. 延迟0.3s，左侧区域从左滑入
+                setTimeout(() => {
+                    document.querySelector('.page7-left').classList.add('visible');
+                    
+                    // 3. 左侧出现后延迟0.3s，右侧标题淡入，然后图片逐个滑入
+                    setTimeout(() => {
+                        document.querySelector('.page7-right-title').classList.add('visible');
+                        
+                        // C1-C13 逐个从左往右滑入，间隔0.18s
+                        const cImages = document.querySelectorAll('.page7-c-image');
+                        cImages.forEach((img, index) => {
+                            setTimeout(() => {
+                                img.classList.add('visible');
+                            }, index * 180);
+                        });
+                    }, 300);
+                }, 300);
+            }, 100);
+        }
+
+        function animateStoryPage() {
+            // 先重置所有元素的可见性
+            const allElements = document.querySelectorAll('#story-title, #story-divider, .story-section, .story-image-wrapper');
+            allElements.forEach(el => el.classList.remove('visible'));
+
+            // 1. 标题和分割线淡入
+            setTimeout(() => {
+                document.getElementById('story-title').classList.add('visible');
+                document.getElementById('story-divider').classList.add('visible');
+                
+                // 2. 延迟0.3s后，第一板块入场
+                setTimeout(() => {
+                    document.getElementById('story-section-1').classList.add('visible');
+                    setTimeout(() => {
+                        document.getElementById('story-image-1-1').classList.add('visible');
+                        
+                        // 3. 第一板块完成后，延迟0.4s，第二板块入场
+                        setTimeout(() => {
+                            document.getElementById('story-section-2').classList.add('visible');
+                            // 第二板块图片从左到右依次出现，间隔0.2s
+                            setTimeout(() => {
+                                document.getElementById('story-image-2-1').classList.add('visible');
+                                setTimeout(() => {
+                                    document.getElementById('story-image-2-2').classList.add('visible');
+                                    setTimeout(() => {
+                                        document.getElementById('story-image-2-3').classList.add('visible');
+                                        setTimeout(() => {
+                                            document.getElementById('story-image-2-4').classList.add('visible');
+                                            
+                                            // 4. 第二板块完成后，延迟0.4s，第三板块入场
+                                            setTimeout(() => {
+                                                document.getElementById('story-section-3').classList.add('visible');
+                                                // 第三板块图片按从上到下、从左到右顺序出现，间隔0.2s
+                                                setTimeout(() => {
+                                                    document.getElementById('story-image-3-1').classList.add('visible');
+                                                    setTimeout(() => {
+                                                        document.getElementById('story-image-3-2').classList.add('visible');
+                                                        setTimeout(() => {
+                                                            document.getElementById('story-image-3-3').classList.add('visible');
+                                                            setTimeout(() => {
+                                                                document.getElementById('story-image-3-4').classList.add('visible');
+                                                            }, 200);
+                                                        }, 200);
+                                                    }, 200);
+                                                }, 200);
+                                            }, 400);
+                                        }, 200);
+                                    }, 200);
+                                }, 200);
+                            }, 300);
+                        }, 400);
+                    }, 300);
+                }, 300);
+            }, 100);
+        }
+
+        function animateNumbers() {
+            const stats = [
+                { element: document.getElementById('stat1'), target: 3 },
+                { element: document.getElementById('stat2'), target: 12 },
+                { element: document.getElementById('stat3'), target: 360 },
+                { element: document.getElementById('stat4'), target: 12 }
+            ];
+            
+            stats.forEach((stat, index) => {
+                setTimeout(() => {
+                    let current = 0;
+                    const increment = stat.target / 60;
+                    const suffix = index === 0 ? '' : '+';
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if (current >= stat.target) {
+                            stat.element.textContent = stat.target.toLocaleString() + suffix;
+                            clearInterval(timer);
+                        } else {
+                            stat.element.textContent = Math.floor(current).toLocaleString() + suffix;
+                        }
+                    }, 16);
+                }, index * 200);
+            });
+        }
+
+        function initPieChart() {
+            const chart = echarts.init(document.getElementById('pieChart'));
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c}% ({d}%)'
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center',
+                    textStyle: { color: '#94a3b8' }
+                },
+                series: [
+                    {
+                        name: '情绪分布',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#0f172a',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            color: '#fff',
+                            formatter: '{b}\n{c}%'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 16,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: [
+                            { value: 62, name: '正面', itemStyle: { color: '#22c55e' } },
+                            { value: 38, name: '负面', itemStyle: { color: '#ef4444' } }
+                        ]
+                    }
+                ],
+                backgroundColor: 'transparent'
+            };
+            chart.setOption(option);
+            
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        function openModal(img) {
+            if (typeof img === 'string') {
+                modalImage.src = img;
+            } else {
+                modalImage.src = img.src;
+            }
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        navDots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const direction = index > currentPage ? 'down' : 'up';
+                goToPage(index, direction);
+            });
+        });
+
+        arrowDown.addEventListener('click', nextPage);
+
+        // 滚动处理逻辑 - 使用原生滚动
+        const pageContainer = document.querySelector('.page-container');
+        let scrollTimeout = null;
+        
+        pageContainer.addEventListener('scroll', (e) => {
+            clearTimeout(scrollTimeout);
+            
+            scrollTimeout = setTimeout(() => {
+                const scrollTop = pageContainer.scrollTop;
+                const viewportHeight = window.innerHeight;
+                const newPage = Math.round(scrollTop / viewportHeight);
+                
+                if (newPage >= 0 && newPage < pageCount && newPage !== currentPage) {
+                    currentPage = newPage;
+                    updatePageIndicator();
+                    updateNavDots();
+                    
+                    // 触发页面动画
+                    if (currentPage === 2) {
+                        animateTechArchitecture();
+                    } else if (currentPage === 3) {
+                        animateTimeline();
+                    } else if (currentPage === 5) {
+                        animateNumbers();
+                        initPieChart();
+                    } else if (currentPage === 6) {
+                        animatePage7();
+                    } else if (currentPage === 8) {
+                        animateStoryPage();
+                    }
+                }
+            }, 100);
+        });
+        
+        // 点击导航点跳转到对应页面
+        navDots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                if (index === currentPage) return;
+                currentPage = index;
+                updatePageIndicator();
+                updateNavDots();
+                pageContainer.scrollTo({
+                    top: index * window.innerHeight,
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowDown':
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (currentPage < pageCount - 1) {
+                        currentPage++;
+                        updatePageIndicator();
+                        updateNavDots();
+                        pageContainer.scrollTo({
+                            top: currentPage * window.innerHeight,
+                            behavior: 'smooth'
+                        });
+                    }
+                    break;
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (currentPage > 0) {
+                        currentPage--;
+                        updatePageIndicator();
+                        updateNavDots();
+                        pageContainer.scrollTo({
+                            top: currentPage * window.innerHeight,
+                            behavior: 'smooth'
+                        });
+                    }
+                    break;
+            }
+        });
+
+        createParticles();
+        
+        setTimeout(() => {
+            animateNumbers();
+        }, 1000);
+    </script>
+</body>
+</html>
