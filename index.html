@@ -158,6 +158,15 @@
             background-clip: text;
         }
 
+        .main-title-link {
+            cursor: pointer;
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .main-title-link:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+        }
+
         .glow-line {
             width: 200px;
             height: 3px;
@@ -505,6 +514,69 @@
         .page7-image-a:hover {
             box-shadow: 0 0 30px rgba(56, 189, 248, 0.5) !important;
         }
+
+        /* 第8页动画样式 */
+        .page8-header {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page8-header.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .page8-main-card {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page8-main-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .page8-title {
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .page8-title.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .page8-module {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .page8-module.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .page8-refresh-btn {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .page8-refresh-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .page8-footer {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .page8-footer.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #refreshIcon.spinning {
+            animation: spin 2s linear;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         
         .story-image-wrapper:hover {
             transform: scale(1.03);
@@ -561,7 +633,7 @@
     <div class="particles" id="particles"></div>
     
     <div class="logo">OC</div>
-    <div class="page-indicator" id="pageIndicator">1 / 10</div>
+    <div class="page-indicator" id="pageIndicator">1 / 11</div>
     
     <div class="nav-dots" id="navDots">
         <div class="nav-dot active" data-page="0"></div>
@@ -574,13 +646,14 @@
         <div class="nav-dot" data-page="7"></div>
         <div class="nav-dot" data-page="8"></div>
         <div class="nav-dot" data-page="9"></div>
+        <div class="nav-dot" data-page="10"></div>
     </div>
 
     <div class="page-container">
         <!-- 第1页：封面页 -->
         <div class="page active" id="page0">
             <div class="text-center">
-                <h1 class="text-4xl md:text-6xl font-bold mb-4 title-gradient">AI新闻情绪自动分析系统</h1>
+                <h1 class="text-4xl md:text-6xl font-bold mb-4 title-gradient main-title-link" onclick="window.open('http://124.221.116.117:7860', '_blank')">AI新闻情绪自动分析系统</h1>
                 <p class="text-xl md:text-2xl text-sky-300/80 mb-6">基于OpenClaw多Agent协作的自动化工作流</p>
                 <div class="glow-line mx-auto"></div>
                 <div class="mt-8 text-gray-300 space-y-2">
@@ -908,8 +981,78 @@
             </div>
         </div>
 
-        <!-- 第8页：小组分工 -->
+        <!-- 第8页：特色功能·数字人销售部 -->
         <div class="page" id="page7">
+            <!-- 顶部标题 -->
+            <div class="text-center mb-6 page8-header">
+                <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-2">特色功能 · 数字人销售部</h2>
+                <p class="text-gray-400 text-lg mb-4">基于AI情绪分析的自动化商业商机挖掘系统</p>
+                <div class="w-32 h-0.5 mx-auto bg-gradient-to-r from-transparent via-sky-400 to-transparent" style="box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);"></div>
+            </div>
+
+            <!-- 主体卡片 -->
+            <div class="glass-card p-6 max-w-5xl w-full page8-main-card">
+                <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2 page8-title">
+                    <span>💰</span>
+                    <span>数字人销售部·每日商机</span>
+                </h3>
+
+                <!-- 三个功能模块 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <!-- 模块一：商业洞察 -->
+                    <div class="glass-card p-4 page8-module page8-module-1" style="border: 1px solid rgba(56, 189, 248, 0.2);">
+                        <h4 class="text-lg font-bold text-sky-400 mb-3 flex items-center gap-2">
+                            <span>💡</span>
+                            <span>商业洞察</span>
+                        </h4>
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            基于当日AI行业新闻情绪分析，自动识别高价值商业机会，提炼行业核心趋势与市场痛点
+                        </p>
+                    </div>
+
+                    <!-- 模块二：销售建议 -->
+                    <div class="glass-card p-4 page8-module page8-module-2" style="border: 1px solid rgba(56, 189, 248, 0.2);">
+                        <h4 class="text-lg font-bold text-sky-400 mb-3 flex items-center gap-2">
+                            <span>📋</span>
+                            <span>销售建议</span>
+                        </h4>
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            针对识别出的市场需求，智能匹配对应的AI产品与解决方案，精准定位目标客户群体
+                        </p>
+                    </div>
+
+                    <!-- 模块三：推荐话术 -->
+                    <div class="glass-card p-4 page8-module page8-module-3" style="border: 1px solid rgba(56, 189, 248, 0.2);">
+                        <h4 class="text-lg font-bold text-sky-400 mb-3 flex items-center gap-2">
+                            <span>💬</span>
+                            <span>推荐话术</span>
+                        </h4>
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            自动生成专业、有说服力的销售话术，一键复制即可直接使用，大幅提升沟通效率
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 刷新按钮 -->
+                <button id="refreshBtn" class="w-full py-3 rounded-lg text-gray-300 font-medium flex items-center justify-center gap-2 transition-all duration-300 hover:bg-sky-500/20 hover:text-white hover:-translate-y-1 page8-refresh-btn" style="background: rgba(100, 116, 139, 0.3); backdrop-filter: blur(10px); border: 1px solid rgba(100, 116, 139, 0.3);">
+                    <span id="refreshIcon" class="inline-block">🔄</span>
+                    <span id="refreshText">刷新报告</span>
+                </button>
+            </div>
+
+            <!-- 底部说明 -->
+            <div class="mt-6 text-center max-w-4xl w-full page8-footer">
+                <p class="text-gray-400 text-sm mb-2">
+                    本功能为项目扩展模块，基于每日生成的情绪分析报告，自动挖掘潜在商业价值，实现从信息采集到商业转化的全链路自动化
+                </p>
+                <p class="text-gray-500 text-xs">
+                    技术实现：OpenClaw Agent + DeepSeek V4 Flash API
+                </p>
+            </div>
+        </div>
+
+        <!-- 第9页：小组分工 -->
+        <div class="page" id="page8">
             <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">小组成员与分工</h2>
             <div class="flex flex-col md:flex-row gap-6 max-w-6xl w-full">
                 <div class="member-card flex-1">
@@ -973,8 +1116,8 @@
             </div>
         </div>
 
-        <!-- 第9页：项目历程与团队风采 -->
-        <div class="page" id="page8">
+        <!-- 第10页：项目历程与团队风采 -->
+        <div class="page" id="page9">
             <div class="w-full max-w-5xl">
                 <h2 class="text-3xl md:text-4xl font-bold title-gradient text-center mb-4" id="story-title">项目历程与团队风采</h2>
                 <div class="glow-line mx-auto mb-8" id="story-divider"></div>
@@ -1032,8 +1175,8 @@
             </div>
         </div>
 
-        <!-- 第10页：总结与展望 -->
-        <div class="page" id="page9">
+        <!-- 第11页：总结与展望 -->
+        <div class="page" id="page10">
             <h2 class="text-3xl md:text-4xl font-bold title-gradient mb-8">总结与展望</h2>
             <div class="flex flex-col lg:flex-row gap-8 max-w-5xl w-full">
                 <div class="glass-card flex-1">
@@ -1243,6 +1386,57 @@
             }, 100);
         }
 
+        function animatePage8() {
+            // 重置所有元素
+            document.querySelector('.page8-header').classList.remove('visible');
+            document.querySelector('.page8-main-card').classList.remove('visible');
+            document.querySelector('.page8-title').classList.remove('visible');
+            document.querySelectorAll('.page8-module').forEach(m => m.classList.remove('visible'));
+            document.querySelector('.page8-refresh-btn').classList.remove('visible');
+            document.querySelector('.page8-footer').classList.remove('visible');
+
+            // 1. 顶部标题淡入上浮 (0.5s)
+            setTimeout(() => {
+                document.querySelector('.page8-header').classList.add('visible');
+                document.querySelector('.page8-main-card').classList.add('visible');
+
+                // 2. 延迟0.3s，大标题从左到右渐显
+                setTimeout(() => {
+                    document.querySelector('.page8-title').classList.add('visible');
+
+                    // 3. 延迟0.3s，三个模块依次淡入
+                    setTimeout(() => {
+                        const modules = document.querySelectorAll('.page8-module');
+                        modules.forEach((module, index) => {
+                            setTimeout(() => {
+                                module.classList.add('visible');
+                            }, index * 200);
+                        });
+
+                        // 4. 最后延迟0.3s，刷新按钮和底部说明淡入
+                        setTimeout(() => {
+                            document.querySelector('.page8-refresh-btn').classList.add('visible');
+                            document.querySelector('.page8-footer').classList.add('visible');
+                        }, modules.length * 200 + 300);
+                    }, 300);
+                }, 300);
+            }, 100);
+        }
+
+        // 刷新按钮交互
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            const icon = document.getElementById('refreshIcon');
+            const text = document.getElementById('refreshText');
+
+            icon.classList.add('spinning');
+            text.textContent = '刷新中...';
+
+            setTimeout(() => {
+                icon.classList.remove('spinning');
+                text.textContent = '刷新报告';
+            }, 2000);
+        });
+
         function animateStoryPage() {
             // 先重置所有元素的可见性
             const allElements = document.querySelectorAll('#story-title, #story-divider, .story-section, .story-image-wrapper');
@@ -1425,7 +1619,9 @@
                         initPieChart();
                     } else if (currentPage === 6) {
                         animatePage7();
-                    } else if (currentPage === 8) {
+                    } else if (currentPage === 7) {
+                        animatePage8();
+                    } else if (currentPage === 9) {
                         animateStoryPage();
                     }
                 }
